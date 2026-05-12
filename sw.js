@@ -1,4 +1,5 @@
-const CACHE_NAME = 'control-gastos-2026-v1';
+const CACHE_NAME = 'control-gastos-2026-v2';
+const SCOPE = '/ControlGastos/';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -13,10 +14,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network first strategy — always fresh data
-  if (e.request.url.includes('firestore') || e.request.url.includes('firebase')) {
-    return; // Don't intercept Firebase calls
-  }
+  if (!e.request.url.includes(SCOPE)) return;
+  if (e.request.url.includes('firestore') || e.request.url.includes('firebase')) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {
