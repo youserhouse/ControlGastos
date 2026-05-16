@@ -1,4 +1,4 @@
-const CACHE_NAME = 'control-gastos-2026-v2';
+const CACHE_NAME = 'control-gastos-2026-v3';
 const SCOPE = '/ControlGastos/';
 
 self.addEventListener('install', e => {
