@@ -1234,7 +1234,7 @@ function applyColorTheme(name) {
   if (splashImg) splashImg.src = 'data:image/png;base64,' + CAT_ICON_B64;
   // Update app icons
   const appIcons = document.querySelectorAll('.app-icon-img');
-  appIcons.forEach(el => { if(COLOR_THEMES[name]) el.src = 'data:image/png;base64,' + COLOR_THEMES[name].icon; });
+  appIcons.forEach(el => { el.src = 'data:image/png;base64,' + CAT_ICON_B64; });
   renderThemeSwatches();
 }
 
