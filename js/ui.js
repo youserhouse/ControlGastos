@@ -34,6 +34,7 @@ window.addEventListener('load', () => {
 function populateSelects() {
   // Categories
   populateCatSelects();
+  populateScanCategory();
 
   // Payers
   populatePayers();
