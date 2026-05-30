@@ -1,13 +1,25 @@
-const CACHE_NAME = 'control-gastos-2026-v4';
+const CACHE_NAME = 'control-gastos-2026-v5';
 const SCOPE = '/ControlGastos/';
 const PRECACHE_URLS = [
   '/ControlGastos/',
   '/ControlGastos/index.html',
   '/ControlGastos/styles.css',
-  '/ControlGastos/app.js',
   '/ControlGastos/manifest.json',
   '/ControlGastos/icon-192.png',
   '/ControlGastos/icon-512.png',
+  '/ControlGastos/js/utils.js',
+  '/ControlGastos/js/theme.js',
+  '/ControlGastos/js/firebase.js',
+  '/ControlGastos/js/auth.js',
+  '/ControlGastos/js/sync.js',
+  '/ControlGastos/js/state.js',
+  '/ControlGastos/js/ui.js',
+  '/ControlGastos/js/gastos.js',
+  '/ControlGastos/js/ingresos.js',
+  '/ControlGastos/js/dashboard.js',
+  '/ControlGastos/js/scanner.js',
+  '/ControlGastos/js/config.js',
+  '/ControlGastos/js/budgets.js',
 ];
 
 self.addEventListener('install', e => {
