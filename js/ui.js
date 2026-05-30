@@ -86,10 +86,11 @@ function switchTab(name) {
   if (name==='ingresos') renderIngresos();
   if (name==='presupuesto') { onBudgetTypeChange(); renderBudgetRows(); renderSavedBudgets(); }
   if (name==='config') { renderThemeSwatches(); loadAnthropicKeyToInput(); }
-  // Show API key warning banner in scanner tab if key is set
+  // Show API key warning banner + populate category dropdown in scanner tab
   if (name==='scanner') {
     const warn = document.getElementById('scanner-api-warning');
     if (warn) warn.style.display = getAnthropicKey() ? 'block' : 'none';
+    populateScanCategory();
   }
 }
 

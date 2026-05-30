@@ -40,6 +40,21 @@ function renderQueue() {
     </div>`).join('');
 }
 
+// Populate the category dropdown with current categories
+function populateScanCategory() {
+  const sel = document.getElementById('scanCategory');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">🔍 Detectar automáticamente</option>';
+  getCats().forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat.name;
+    opt.textContent = cat.name;
+    if (cat.name === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
 async function runScan() {
   const key = getAnthropicKey();
   if (!key) {
@@ -48,29 +63,32 @@ async function runScan() {
   }
   if (scanFiles.length === 0) return;
 
-
+  // Read optional forced category
+  const forcedCat = document.getElementById('scanCategory')?.value || '';
 
   const btn = document.getElementById('scanBtn');
-  const log = document.getElementById('scanLog');
+  const logEl = document.getElementById('scanLog');
   btn.disabled = true;
   document.getElementById('scanSpinner').style.display = 'block';
   document.getElementById('scanBtnTxt').textContent = 'Analizando…';
-  log.innerHTML = ''; log.classList.add('show');
+  logEl.innerHTML = ''; logEl.classList.add('show');
+
+  if (forcedCat) addScanLog(`📂 Categoría forzada: ${forcedCat}`);
 
   let added = 0;
   for (const sf of scanFiles) {
     addScanLog(`📄 ${sf.name}…`);
     try {
-      const results = await callClaudeReceipt(sf.dataUrl, key);
+      const results = await callClaudeReceipt(sf.dataUrl, key, forcedCat);
       results.forEach(r => {
         state.gastos.push({
           id: uid(),
           date: r.fecha || todayIso(),
           store: r.establecimiento || 'Desconocido',
-          cat: r.categoria || 'Otros',
+          cat: r.categoria,
           amt: parseFloat(r.importe) || 0,
           desc: r.descripcion || '',
-          payer: 'Conjunto',   // default — user can edit in lista
+          payer: 'Conjunto',
           type: 'variable',
         });
         added++;
@@ -93,10 +111,15 @@ async function runScan() {
   if (added > 0) showToast(`✓ ${added} gastos importados`, 'ok');
 }
 
-async function callClaudeReceipt(dataUrl, key) {
+// forcedCat: if provided, override Claude's category decision
+async function callClaudeReceipt(dataUrl, key, forcedCat = '') {
   const [meta, b64] = dataUrl.split(',');
   const mtype = meta.match(/:(.*?);/)[1];
   const catNames = getCats().map(cat => cat.name);
+
+  const catInstruction = forcedCat
+    ? `- "categoria": USA OBLIGATORIAMENTE esta categoría exacta: "${forcedCat}"`
+    : `- "categoria": DEBE ser exactamente una de estas opciones (copia exacta): ${catNames.join(' | ')}`;
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -118,7 +141,7 @@ Cada objeto debe tener exactamente estas claves:
 - "fecha": formato YYYY-MM-DD (ejemplo: 2026-05-12). Si no se ve la fecha usa la de hoy: ${todayIso()}.
 - "establecimiento": nombre del comercio
 - "descripcion": resumen breve máx 60 chars
-- "categoria": DEBE ser exactamente una de estas opciones (copia exacta): ${catNames.join(' | ')}
+${catInstruction}
 - "importe": número decimal sin símbolo de moneda (ejemplo: 45.50)
 Si la imagen no es un recibo devuelve [].
 Responde ÚNICAMENTE con el JSON array, sin explicaciones ni markdown.` }
@@ -136,15 +159,15 @@ Responde ÚNICAMENTE con el JSON array, sin explicaciones ni markdown.` }
   const parsed = JSON.parse(text);
   if (!Array.isArray(parsed)) return [];
 
-  // Validate and fix each result
   return parsed.map(item => ({
     ...item,
-    // Ensure date is YYYY-MM-DD format
     fecha: fixDate(item.fecha),
-    // Ensure category exactly matches one of ours
-    categoria: (item.categoria && catNames.includes(item.categoria))
-      ? item.categoria
-      : findClosestCat(item.categoria || '', catNames),
+    // If category was forced, apply it regardless of what Claude returned
+    categoria: forcedCat
+      ? forcedCat
+      : (item.categoria && catNames.includes(item.categoria)
+          ? item.categoria
+          : findClosestCat(item.categoria || '', catNames)),
     importe: parseFloat(item.importe) || 0,
   })).filter(item => item.importe > 0);
 }
@@ -152,12 +175,9 @@ Responde ÚNICAMENTE con el JSON array, sin explicaciones ni markdown.` }
 // Convert any date format to YYYY-MM-DD
 function fixDate(dateStr) {
   if (!dateStr) return todayIso();
-  // Already YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-  // DD/MM/YYYY
   const m1 = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m1) return `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
-  // DD-MM-YYYY
   const m2 = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
   if (m2) return `${m2[3]}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;
   return todayIso();
@@ -175,11 +195,10 @@ function findClosestCat(catFromClaude, catNames) {
 }
 
 function addScanLog(msg, type='') {
-  const log = document.getElementById('scanLog');
+  const logEl = document.getElementById('scanLog');
   const d = document.createElement('div');
   d.style.color = type==='ok'?'#5ABEA0':type==='err'?'#E07070':'var(--teal-light)';
   d.textContent = '> '+msg;
-  log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
 }
-
