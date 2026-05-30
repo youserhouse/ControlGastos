@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-// UTILS — escapeHTML · log
+// UTILS — escapeHTML · log · API key local
 // ═══════════════════════════════════════════════════════════════════
 function escapeHTML(str) {
   const d = document.createElement('div');
@@ -7,6 +7,13 @@ function escapeHTML(str) {
   return d.innerHTML;
 }
 const log = (...a) => { if (localStorage.getItem('debug')) console.log(...a); };
+
+function saveAnthropicKey(key) {
+  localStorage.setItem('anthropic_api_key', key.trim());
+}
+function getAnthropicKey() {
+  return localStorage.getItem('anthropic_api_key') || '';
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // TEMA OSCURO / CLARO
@@ -46,20 +53,7 @@ function toggleTheme() {
 // ═══════════════════════════════════════════════════════════════════
 // FETCH API KEY FROM FIRESTORE (never hardcoded)
 // ═══════════════════════════════════════════════════════════════════
-let _anthropicKey = '';
 
-async function loadAnthropicKey() {
-  if (_anthropicKey) return _anthropicKey;
-  try {
-    const doc = await db.collection('config').doc('secrets').get();
-    if (doc.exists) {
-      _anthropicKey = doc.data().anthropic_key || '';
-    }
-  } catch(e) {
-    console.error('Could not load API key:', e);
-  }
-  return _anthropicKey;
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // COLOR THEMES
@@ -88,6 +82,25 @@ function applyColorTheme(name) {
   const appIcons = document.querySelectorAll('.app-icon-img');
   appIcons.forEach(el => { el.src = 'data:image/png;base64,' + CAT_ICON_B64; });
   renderThemeSwatches();
+}
+
+function guardarAnthropicKey() {
+  const key = document.getElementById('anthropicKeyInput').value.trim();
+  if (!key.startsWith('sk-ant-')) {
+    alert('La clave debe empezar por sk-ant-');
+    return;
+  }
+  saveAnthropicKey(key);
+  document.getElementById('anthropicKeyInput').value = '';
+  loadAnthropicKeyToInput();
+  alert('✅ Clave guardada correctamente');
+}
+
+function loadAnthropicKeyToInput() {
+  const input = document.getElementById('anthropicKeyInput');
+  if (!input) return;
+  const saved = getAnthropicKey();
+  input.placeholder = saved ? saved.slice(0, 8) + '••••••••' : 'sk-ant-...';
 }
 
 function renderThemeSwatches() {
@@ -323,7 +336,6 @@ function getCatColor(n) { const list = state && state.cats ? state.cats : DEFAUL
 const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-const HARDCODED_API_KEY = ''; // loaded from Firebase
 let state = load();
 
 function load() {
@@ -448,11 +460,11 @@ function switchTab(name) {
   if (name==='lista') renderLista();
   if (name==='ingresos') renderIngresos();
   if (name==='presupuesto') { onBudgetTypeChange(); renderBudgetRows(); renderSavedBudgets(); }
-  if (name==='config') { renderThemeSwatches(); }
+  if (name==='config') { renderThemeSwatches(); loadAnthropicKeyToInput(); }
   // Show API key warning banner in scanner tab if key is set
   if (name==='scanner') {
     const warn = document.getElementById('scanner-api-warning');
-    if (warn) warn.style.display = localStorage.getItem('gp_claude_key') ? 'block' : 'none';
+    if (warn) warn.style.display = getAnthropicKey() ? 'block' : 'none';
   }
 }
 
@@ -840,12 +852,11 @@ function renderQueue() {
 }
 
 async function runScan() {
-  const key = await loadAnthropicKey();
-  if (!key || !key.startsWith('sk-')) {
-    showToast('Escáner no disponible — clave no configurada', 'err');
+  const key = getAnthropicKey();
+  if (!key) {
+    showToast('Escáner no disponible — configura tu clave API en Config', 'err');
     return;
   }
-  if (!key || !key.startsWith('sk-')) { showToast('Error de configuración interna','err'); return; }
   if (scanFiles.length === 0) return;
 
 
