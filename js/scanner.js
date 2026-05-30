@@ -48,9 +48,9 @@ function populateScanCategory() {
   sel.innerHTML = '<option value="">🔍 Detectar automáticamente</option>';
   getCats().forEach(cat => {
     const opt = document.createElement('option');
-    opt.value = cat.name;
-    opt.textContent = cat.name;
-    if (cat.name === current) opt.selected = true;
+    opt.value = cat;
+    opt.textContent = cat;
+    if (cat === current) opt.selected = true;
     sel.appendChild(opt);
   });
 }
@@ -115,7 +115,7 @@ async function runScan() {
 async function callClaudeReceipt(dataUrl, key, forcedCat = '') {
   const [meta, b64] = dataUrl.split(',');
   const mtype = meta.match(/:(.*?);/)[1];
-  const catNames = getCats().map(cat => cat.name);
+  const catNames = getCats();
 
   const catInstruction = forcedCat
     ? `- "categoria": USA OBLIGATORIAMENTE esta categoría exacta: "${forcedCat}"`
