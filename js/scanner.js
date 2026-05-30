@@ -63,7 +63,7 @@ async function runScan() {
   }
   if (scanFiles.length === 0) return;
 
-  // Read optional forced category
+  // Category to force AFTER Claude reads the image (not sent to Claude)
   const forcedCat = document.getElementById('scanCategory')?.value || '';
 
   const btn = document.getElementById('scanBtn');
@@ -73,20 +73,22 @@ async function runScan() {
   document.getElementById('scanBtnTxt').textContent = 'Analizando…';
   logEl.innerHTML = ''; logEl.classList.add('show');
 
-  if (forcedCat) addScanLog(`📂 Categoría forzada: ${forcedCat}`);
+  if (forcedCat) addScanLog(`📂 Se asignará la categoría: ${forcedCat}`);
 
   let added = 0;
   for (const sf of scanFiles) {
     addScanLog(`📄 ${sf.name}…`);
     try {
-      const results = await callClaudeReceipt(sf.dataUrl, key, forcedCat);
+      const results = await callClaudeReceipt(sf.dataUrl, key);
       results.forEach(r => {
+        // Apply forced category after reading, or keep Claude's guess
+        const cat = forcedCat || r.categoria || getCats()[0] || 'Otros';
         state.gastos.push({
           id: uid(),
           date: r.fecha || todayIso(),
           store: r.establecimiento || 'Desconocido',
-          cat: r.categoria,
-          amt: parseFloat(r.importe) || 0,
+          cat,
+          amt: r.importe,
           desc: r.descripcion || '',
           payer: 'Conjunto',
           type: 'variable',
@@ -111,15 +113,12 @@ async function runScan() {
   if (added > 0) showToast(`✓ ${added} gastos importados`, 'ok');
 }
 
-// forcedCat: if provided, override Claude's category decision
-async function callClaudeReceipt(dataUrl, key, forcedCat = '') {
+// Claude solo extrae datos — la categoría se asigna en runScan() después
+async function callClaudeReceipt(dataUrl, key) {
   const [meta, b64] = dataUrl.split(',');
   const mtype = meta.match(/:(.*?);/)[1];
   const catNames = getCats();
-
-  const catInstruction = forcedCat
-    ? `- "categoria": USA OBLIGATORIAMENTE esta categoría exacta: "${forcedCat}"`
-    : `- "categoria": DEBE ser exactamente una de estas opciones (copia exacta): ${catNames.join(' | ')}`;
+  const catList = catNames.length ? catNames.join(' | ') : 'Otros';
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -136,14 +135,14 @@ async function callClaudeReceipt(dataUrl, key, forcedCat = '') {
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mtype, data: b64 } },
-          { type: 'text', text: `Analiza este recibo y devuelve SOLO un JSON array sin markdown, sin texto extra.
+          { type: 'text', text: `Analiza este recibo o extracto bancario y devuelve SOLO un JSON array sin markdown, sin texto extra.
 Cada objeto debe tener exactamente estas claves:
-- "fecha": formato YYYY-MM-DD (ejemplo: 2026-05-12). Si no se ve la fecha usa la de hoy: ${todayIso()}.
-- "establecimiento": nombre del comercio
+- "fecha": formato YYYY-MM-DD. Si no se ve usa la de hoy: ${todayIso()}.
+- "establecimiento": nombre del comercio o entidad
 - "descripcion": resumen breve máx 60 chars
-${catInstruction}
-- "importe": número decimal sin símbolo de moneda (ejemplo: 45.50)
-Si la imagen no es un recibo devuelve [].
+- "categoria": una de estas (copia exacta): ${catList}
+- "importe": número decimal POSITIVO sin símbolo de moneda (ejemplo: 45.50). Si aparece negativo en el extracto, conviértelo a positivo.
+Si la imagen no contiene movimientos o gastos devuelve [].
 Responde ÚNICAMENTE con el JSON array, sin explicaciones ni markdown.` }
         ]
       }]
@@ -162,13 +161,11 @@ Responde ÚNICAMENTE con el JSON array, sin explicaciones ni markdown.` }
   return parsed.map(item => ({
     ...item,
     fecha: fixDate(item.fecha),
-    // If category was forced, apply it regardless of what Claude returned
-    categoria: forcedCat
-      ? forcedCat
-      : (item.categoria && catNames.includes(item.categoria)
-          ? item.categoria
-          : findClosestCat(item.categoria || '', catNames)),
-    importe: parseFloat(item.importe) || 0,
+    categoria: (item.categoria && catNames.includes(item.categoria))
+      ? item.categoria
+      : findClosestCat(item.categoria || '', catNames),
+    // Always positive — expenses in bank statements come as negative
+    importe: Math.abs(parseFloat(item.importe) || 0),
   })).filter(item => item.importe > 0);
 }
 
@@ -185,13 +182,14 @@ function fixDate(dateStr) {
 
 // Find closest matching category name (case-insensitive)
 function findClosestCat(catFromClaude, catNames) {
-  if (!catFromClaude || typeof catFromClaude !== 'string') return catNames[0] || 'Otros';
+  if (!catNames.length) return 'Otros';
+  if (!catFromClaude || typeof catFromClaude !== 'string') return catNames[0];
   const lower = catFromClaude.toLowerCase();
   const exact = catNames.find(n => n && n.toLowerCase() === lower);
   if (exact) return exact;
   const partial = catNames.find(n => n && (lower.includes(n.toLowerCase()) || n.toLowerCase().includes(lower)));
   if (partial) return partial;
-  return catNames[0] || 'Otros';
+  return catNames[0];
 }
 
 function addScanLog(msg, type='') {
