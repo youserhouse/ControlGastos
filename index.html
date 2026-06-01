@@ -21,6 +21,89 @@
 </head>
 <body>
 
+<!-- Bank Import Modal -->
+<div class="modal-bg" id="bankImportModal">
+  <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto">
+    <h2>🏦 Importar extracto bancario</h2>
+
+    <!-- File picker -->
+    <div style="border:2px dashed rgba(125,191,191,0.3);border-radius:.75rem;padding:1rem;text-align:center;margin-bottom:1rem">
+      <input type="file" id="bankFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="bankImportFileChanged(this)">
+      <label for="bankFileInput" class="submit-btn" style="display:inline-block;cursor:pointer;margin-bottom:.5rem">📂 Seleccionar archivo</label>
+      <div id="bankFileName" style="font-size:.8rem;color:var(--gray)">Ningún archivo seleccionado</div>
+      <div style="font-size:.74rem;color:var(--gray);margin-top:.3rem">CSV, XLSX o XLS</div>
+    </div>
+
+    <!-- Saved profiles -->
+    <div style="margin-bottom:.75rem">
+      <div style="font-size:.78rem;color:var(--teal-light);margin-bottom:.35rem;font-weight:500">Perfiles guardados</div>
+      <div id="bankProfileList"></div>
+    </div>
+
+    <!-- AI hint -->
+    <div id="bankAiHint" style="font-size:.77rem;color:var(--gray);min-height:1.1em;margin-bottom:.5rem"></div>
+
+    <!-- Column mapping -->
+    <div id="bankMappingWrap" style="display:none">
+      <div style="font-size:.85rem;color:var(--teal-light);font-weight:500;margin-bottom:.6rem">Mapeo de columnas</div>
+      <div class="form-grid" style="margin-bottom:.6rem">
+        <div class="form-group">
+          <label>Columna Fecha *</label>
+          <select id="mapDate" onchange="updateBankPreview()"></select>
+        </div>
+        <div class="form-group">
+          <label>Columna Importe *</label>
+          <select id="mapAmt" onchange="updateBankPreview()"></select>
+        </div>
+        <div class="form-group form-full">
+          <label>Columna Descripción</label>
+          <select id="mapDesc" onchange="updateBankPreview()"></select>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;cursor:pointer;margin-bottom:.75rem">
+        <input type="checkbox" id="mapSkipPositive" onchange="updateBankPreview()">
+        Ignorar importes positivos (ingresos / devoluciones)
+      </label>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <input type="text" id="bankProfileName" placeholder="Nombre del banco (ej: BBVA)"
+               style="flex:1;font-size:.82rem">
+        <button class="pill-btn" onclick="saveCurrentBankProfile()" style="white-space:nowrap;padding:.35rem .65rem">💾 Guardar perfil</button>
+      </div>
+    </div>
+
+    <!-- Preview table -->
+    <div id="bankPreviewWrap" style="display:none;margin-top:1rem">
+      <div style="font-size:.82rem;color:var(--teal-light);font-weight:500;margin-bottom:.4rem">
+        Vista previa — <span id="bankPreviewCount">0</span> gastos encontrados
+      </div>
+      <div style="overflow-x:auto;max-height:180px;overflow-y:auto;border:1px solid rgba(125,191,191,0.15);border-radius:.5rem">
+        <table id="bankPreviewTable" style="width:100%;border-collapse:collapse"></table>
+      </div>
+    </div>
+
+    <!-- Category & payer -->
+    <div id="bankImportOptionsWrap" style="display:none;margin-top:1rem">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Categoría por defecto</label>
+          <select id="bankCat"></select>
+        </div>
+        <div class="form-group">
+          <label>Pagado por</label>
+          <select id="bankPayer"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem">
+      <button id="bankImportBtn" class="submit-btn" style="flex:1;display:none" onclick="confirmBankImport()">✓ Importar gastos</button>
+      <button class="submit-btn" onclick="closeModal('bankImportModal')"
+              style="background:rgba(255,255,255,0.08);box-shadow:none;flex:1">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Edit modal -->
 <div class="modal-bg" id="editModal">
   <div class="modal-box">
@@ -387,6 +470,7 @@
         <button class="submit-btn" onclick="exportCSV()" style="flex:1">↓ Exportar CSV completo</button>
         <label class="submit-btn" for="importFileInput" style="flex:1;background:rgba(74,144,144,0.3);box-shadow:none;cursor:pointer;text-align:center">↑ Importar CSV</label>
       </div>
+      <button class="submit-btn" onclick="openBankImport()" style="margin-top:.75rem;background:rgba(74,144,144,0.25);box-shadow:none">🏦 Importar extracto bancario</button>
       <button class="submit-btn" onclick="if(confirm('¿Borrar todos los datos?'))clearData()" style="margin-top:.75rem;background:rgba(201,64,64,0.3);box-shadow:none">🗑 Borrar todos los datos</button>
     </div>
   </div>
@@ -488,5 +572,6 @@
 <script src="js/scanner.js" defer></script>
 <script src="js/config.js" defer></script>
 <script src="js/budgets.js" defer></script>
+<script src="js/bank-import.js" defer></script>
 </body>
 </html>

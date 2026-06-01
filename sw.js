@@ -1,4 +1,4 @@
-const CACHE_NAME = 'control-gastos-2026-v5';
+const CACHE_NAME = 'control-gastos-2026-v6';
 const SCOPE = '/ControlGastos/';
 const PRECACHE_URLS = [
   '/ControlGastos/',
@@ -20,6 +20,7 @@ const PRECACHE_URLS = [
   '/ControlGastos/js/scanner.js',
   '/ControlGastos/js/config.js',
   '/ControlGastos/js/budgets.js',
+  '/ControlGastos/js/bank-import.js',
 ];
 
 self.addEventListener('install', e => {
