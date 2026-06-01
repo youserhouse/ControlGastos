@@ -21,6 +21,26 @@
 </head>
 <body>
 
+<!-- Delete Month Modal -->
+<div class="modal-bg" id="deleteMonthModal">
+  <div class="modal-box" style="max-width:380px">
+    <h2>🗑 Borrar datos de un mes</h2>
+    <p style="font-size:.84rem;color:var(--gray);margin-bottom:1.25rem;line-height:1.6">
+      Se borrarán los gastos e ingresos del mes seleccionado.<br>
+      Las categorías y presupuestos <strong style="color:var(--white)">no</strong> se verán afectados.
+    </p>
+    <div class="form-group" style="margin-bottom:.75rem">
+      <label>Mes a borrar</label>
+      <input type="month" id="deleteMonthInput" style="width:100%" oninput="_updateDeleteMonthPreview()">
+    </div>
+    <div id="deleteMonthPreview" style="font-size:.82rem;color:var(--teal-light);margin-bottom:1.25rem;min-height:1.2em"></div>
+    <div style="display:flex;gap:.75rem">
+      <button class="submit-btn" onclick="confirmDeleteMonth()" style="flex:1;background:rgba(201,64,64,0.5)">🗑 Borrar mes</button>
+      <button class="submit-btn" onclick="closeModal('deleteMonthModal')" style="background:rgba(255,255,255,0.08);box-shadow:none">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bank Import Modal -->
 <div class="modal-bg" id="bankImportModal">
   <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto">
@@ -471,7 +491,7 @@
         <label class="submit-btn" for="importFileInput" style="flex:1;background:rgba(74,144,144,0.3);box-shadow:none;cursor:pointer;text-align:center">↑ Importar CSV</label>
       </div>
       <button class="submit-btn" onclick="openBankImport()" style="margin-top:.75rem;background:rgba(74,144,144,0.25);box-shadow:none">🏦 Importar extracto bancario</button>
-      <button class="submit-btn" onclick="if(confirm('¿Borrar todos los datos?'))clearData()" style="margin-top:.75rem;background:rgba(201,64,64,0.3);box-shadow:none">🗑 Borrar todos los datos</button>
+      <button class="submit-btn" onclick="openDeleteMonth()" style="margin-top:.75rem;background:rgba(201,64,64,0.3);box-shadow:none">🗑 Borrar datos de un mes</button>
     </div>
   </div>
 

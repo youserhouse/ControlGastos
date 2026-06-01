@@ -21,6 +21,39 @@ function clearData() {
   }
 }
 
+function openDeleteMonth() {
+  const now = new Date();
+  const cur = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('deleteMonthInput').value = cur;
+  _updateDeleteMonthPreview();
+  openModal('deleteMonthModal');
+}
+
+function _updateDeleteMonthPreview() {
+  const val = document.getElementById('deleteMonthInput').value;
+  const el  = document.getElementById('deleteMonthPreview');
+  if (!val) { el.textContent = ''; return; }
+  const ng = state.gastos.filter(g => g.date && g.date.startsWith(val)).length;
+  const ni = state.ingresos.filter(i => i.date && i.date.startsWith(val)).length;
+  el.textContent = ng + ni === 0
+    ? 'No hay datos en ese mes.'
+    : `Se borrarán ${ng} gasto${ng!==1?'s':''} y ${ni} ingreso${ni!==1?'s':''}.`;
+}
+
+function confirmDeleteMonth() {
+  const val = document.getElementById('deleteMonthInput').value;
+  if (!val) { showToast('Selecciona un mes', 'err'); return; }
+  const [y, m] = val.split('-');
+  const label = new Date(+y, +m - 1, 1).toLocaleDateString('es', { month: 'long', year: 'numeric' });
+  if (!confirm(`¿Borrar todos los gastos e ingresos de ${label}? Esta acción no se puede deshacer.`)) return;
+  state.gastos   = state.gastos.filter(g   => !(g.date   && g.date.startsWith(val)));
+  state.ingresos = state.ingresos.filter(i => !(i.date   && i.date.startsWith(val)));
+  save();
+  closeModal('deleteMonthModal');
+  renderDashboard(); renderLista(); renderIngresos();
+  showToast(`✓ Datos de ${label} borrados`, 'ok');
+}
+
 
 // ═══════════════════════════════════════════════════════════════════
 // API KEY MODAL
