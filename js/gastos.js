@@ -46,11 +46,14 @@ function addGasto() {
   if (overBudget) {
     sub += ` · ⚠ Excedido (${fmt(nuevoTotal)} / ${fmt(presupCat)})`;
     showSuccessBanner('Gasto añadido — ⚠ Presupuesto excedido', sub, '#C94040');
+    showToast('⚠ Presupuesto excedido', 'err');
   } else if (nearBudget) {
     sub += ` · ⚡ Cerca del límite (${Math.round(nuevoTotal/presupCat*100)}%)`;
     showSuccessBanner('Gasto añadido — Cerca del límite', sub, '#C87820');
+    showToast('✓ Gasto añadido — cerca del límite');
   } else {
     showSuccessBanner('Gasto añadido', sub, null);
+    showToast('✓ Gasto añadido');
   }
 }
 
