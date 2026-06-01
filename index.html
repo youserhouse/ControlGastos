@@ -491,7 +491,7 @@
         <label class="submit-btn" for="importFileInput" style="flex:1;background:rgba(74,144,144,0.3);box-shadow:none;cursor:pointer;text-align:center">↑ Importar CSV</label>
       </div>
       <button class="submit-btn" onclick="openBankImport()" style="margin-top:.75rem;background:rgba(74,144,144,0.25);box-shadow:none">🏦 Importar extracto bancario</button>
-      <button class="submit-btn" onclick="openDeleteMonth()" style="margin-top:.75rem;background:rgba(201,64,64,0.3);box-shadow:none">🗑 Borrar datos de un mes</button>
+      <button class="submit-btn" onclick="if(confirm('¿Borrar todos los datos?'))clearData()" style="margin-top:.75rem;background:rgba(201,64,64,0.3);box-shadow:none">🗑 Borrar todos los datos</button>
     </div>
   </div>
 
