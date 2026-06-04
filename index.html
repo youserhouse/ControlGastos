@@ -233,7 +233,6 @@
   <nav class="drawer-nav">
     <button class="drawer-item" data-panel="dashboard"   onclick="switchTab('dashboard');closeDrawer()">📊 Dashboard</button>
     <button class="drawer-item" data-panel="lista"       onclick="switchTab('lista');closeDrawer()">📋 Todos los gastos</button>
-    <button class="drawer-item" data-panel="scanner"     onclick="switchTab('scanner');closeDrawer()">📷 Escáner IA</button>
     <button class="drawer-item" data-panel="presupuesto" onclick="switchTab('presupuesto');closeDrawer()">🎯 Presupuesto</button>
     <button class="drawer-item" data-panel="config"      onclick="switchTab('config');closeDrawer()">⚙ Configuración</button>
   </nav>
@@ -613,6 +612,10 @@
     <button class="fab-option" onclick="switchTab('gastos');closeFab()">
       <span class="fab-option-label">Añadir gasto</span>
       <span class="fab-option-icon">➕</span>
+    </button>
+    <button class="fab-option" onclick="switchTab('scanner');closeFab()">
+      <span class="fab-option-label">Escáner IA</span>
+      <span class="fab-option-icon">📷</span>
     </button>
   </div>
   <button class="fab-btn" onclick="toggleFab()">+</button>
