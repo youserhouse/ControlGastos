@@ -1,22 +1,33 @@
 // ═══════════════════════════════════════════════════════════════════
 // FIREBASE CONFIG & INIT
-
 // ═══════════════════════════════════════════════════════════════════
-// TODO: Move to environment variables / config.local.js (see .env.example)
-// SECURITY: Do not commit real keys to version control
-const firebaseConfig = {
-  apiKey: "AIzaSyANlZleUp1jS1iT9QpDKgVQvMk76zVKnJo",
-  authDomain: "gastos-en-pareja-e2f3c.firebaseapp.com",
-  projectId: "gastos-en-pareja-e2f3c",
-  storageBucket: "gastos-en-pareja-e2f3c.firebasestorage.app",
-  messagingSenderId: "134933655955",
-  appId: "1:134933655955:web:06777421bd1fa4ba777866"
-};
+// Config is loaded from js/firebase.config.js (excluded from git).
+// Copy js/firebase.config.example.js → js/firebase.config.js and fill in your values.
+// SECURITY: Rotate the keys below in Firebase Console if they were ever committed publicly.
+const firebaseConfig = (typeof FIREBASE_CONFIG !== 'undefined')
+  ? FIREBASE_CONFIG
+  : {
+    // ⚠ FALLBACK — these keys are public; restrict them in Firebase Console:
+    // https://console.firebase.google.com → Project Settings → API key restrictions
+    apiKey: "AIzaSyANlZleUp1jS1iT9QpDKgVQvMk76zVKnJo",
+    authDomain: "gastos-en-pareja-e2f3c.firebaseapp.com",
+    projectId: "gastos-en-pareja-e2f3c",
+    storageBucket: "gastos-en-pareja-e2f3c.firebasestorage.app",
+    messagingSenderId: "134933655955",
+    appId: "1:134933655955:web:06777421bd1fa4ba777866"
+  };
 
 // Firebase instances — initialized lazily inside initFirebase()
 let db   = null;
 let auth = null;
-const SHARED_DOC = () => db.collection('parejas').doc('shared');
+
+// Each user's data is stored under their own UID to prevent cross-user data leakage.
+// SECURITY: Pair with Firestore rules — see SECURITY.md.
+const SHARED_DOC = () => {
+  const user = auth && auth.currentUser;
+  if (!user) throw new Error('SHARED_DOC called before authentication');
+  return db.collection('parejas').doc(user.uid);
+};
 
 function initFirebase() {
   if (typeof firebase === 'undefined') {
