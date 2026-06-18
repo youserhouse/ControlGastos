@@ -4,6 +4,9 @@
 .env.*.local
 config.local.js
 
+# Firebase local config — contains real API keys; never commit this file
+js/firebase.config.js
+
 # Dependencies
 node_modules/
 npm-debug.log*
