@@ -3,6 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- SECURITY: Content Security Policy — restricts what the page can load/connect to.
+     'unsafe-inline' for scripts is required by the current inline onclick handlers.
+     Future improvement: refactor handlers to addEventListener() and remove 'unsafe-inline'. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.sheetjs.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src https://fonts.gstatic.com;
+  connect-src 'self'
+    https://*.googleapis.com
+    https://firestore.googleapis.com
+    https://identitytoolkit.googleapis.com
+    wss://*.firebaseio.com
+    https://*.firebaseio.com
+    https://api.anthropic.com;
+  img-src 'self' data: blob:;
+  worker-src 'self';
+  frame-ancestors 'none';
+">
 <title>Gastos Pareja</title>
 <link rel="manifest" href="/ControlGastos/manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -589,6 +608,10 @@
 
 <script src="js/utils.js" defer></script>
 <script src="js/theme.js" defer></script>
+<!-- SECURITY: firebase.config.js is excluded from git (.gitignore).
+     Copy js/firebase.config.example.js → js/firebase.config.js and fill in your keys.
+     If the file is absent the fallback keys in firebase.js are used (restrict them in Firebase Console). -->
+<script src="js/firebase.config.js" defer onerror="console.warn('firebase.config.js not found — using fallback keys. See js/firebase.config.example.js')"></script>
 <script src="js/firebase.js" defer></script>
 <script src="js/auth.js" defer></script>
 <script src="js/sync.js" defer></script>
