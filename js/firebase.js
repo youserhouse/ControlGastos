@@ -3,12 +3,11 @@
 // ═══════════════════════════════════════════════════════════════════
 // Config is loaded from js/firebase.config.js (excluded from git).
 // Copy js/firebase.config.example.js → js/firebase.config.js and fill in your values.
-// SECURITY: Rotate the keys below in Firebase Console if they were ever committed publicly.
+// SECURITY: Rotate the keys below in Firebase Console — they were publicly exposed.
 const firebaseConfig = (typeof FIREBASE_CONFIG !== 'undefined')
   ? FIREBASE_CONFIG
   : {
-    // ⚠ FALLBACK — these keys are public; restrict them in Firebase Console:
-    // https://console.firebase.google.com → Project Settings → API key restrictions
+    // ⚠ FALLBACK — restrict these in Firebase Console (API key restrictions → HTTP referrers)
     apiKey: "AIzaSyANlZleUp1jS1iT9QpDKgVQvMk76zVKnJo",
     authDomain: "gastos-en-pareja-e2f3c.firebaseapp.com",
     projectId: "gastos-en-pareja-e2f3c",
@@ -21,13 +20,10 @@ const firebaseConfig = (typeof FIREBASE_CONFIG !== 'undefined')
 let db   = null;
 let auth = null;
 
-// Each user's data is stored under their own UID to prevent cross-user data leakage.
-// SECURITY: Pair with Firestore rules — see SECURITY.md.
-const SHARED_DOC = () => {
-  const user = auth && auth.currentUser;
-  if (!user) throw new Error('SHARED_DOC called before authentication');
-  return db.collection('parejas').doc(user.uid);
-};
+// App for exactly two people (couple) sharing ONE document.
+// Access is restricted server-side by Firestore rules — see SECURITY.md.
+// Only the two allowlisted UIDs can read/write this document.
+const SHARED_DOC = () => db.collection('parejas').doc('shared');
 
 function initFirebase() {
   if (typeof firebase === 'undefined') {
