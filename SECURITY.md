@@ -5,7 +5,7 @@
 | # | Severity | Issue | Status |
 |---|----------|-------|--------|
 | 1 | 🔴 Critical | Hardcoded Firebase API key committed to repo | Mitigated — `js/firebase.config.js` pattern added; rotate keys in Firebase Console |
-| 2 | 🔴 Critical | Single global Firestore document (`parejas/shared`) — any authenticated user could read/write everyone's data | **Fixed** — `SHARED_DOC` now uses `auth.currentUser.uid`; each user has isolated data |
+| 2 | 🔴 Critical | Firestore document `parejas/shared` accessible to ANY authenticated user | **Fixed** — Firestore rules restrict access to the two allowlisted UIDs only |
 | 3 | 🟠 High | XSS in `scanner.js renderQueue()` — file name injected raw into `innerHTML` | **Fixed** — wrapped with `escapeHTML()` |
 | 4 | 🟠 High | XSS in `ingresos.js renderIngresos()` — person name and type injected raw into `innerHTML` | **Fixed** — wrapped with `escapeHTML()` |
 | 5 | 🟡 Medium | No Content Security Policy | **Fixed** — CSP meta tag added to `index.html` |
@@ -30,34 +30,41 @@
 
 ---
 
-## 2. Firestore Data Isolation
+## 2. Firestore Access Control — Two-Person Allowlist
+
+### Design context
+ControlGastos is built for **exactly two people** sharing **one document** (`parejas/shared`). The correct security model is NOT per-user isolation (that would break sharing) but a **UID allowlist** — only the two known UIDs can read/write anything in Firestore.
 
 ### What was done
-`SHARED_DOC` now points to `parejas/{uid}` (each authenticated user's own document) instead of the global `parejas/shared`.
+`SHARED_DOC` keeps pointing to `parejas/shared` (shared couple document). Access is enforced server-side by Firestore rules, not in the client.
 
-### Firestore Security Rules (REQUIRED)
+### Firestore Security Rules to apply
 
-Apply these rules in [Firebase Console → Firestore → Rules](https://console.firebase.google.com):
+In [Firebase Console → Firestore → Rules](https://console.firebase.google.com), replace the current rules with:
 
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each user can only read/write their own document
-    match /parejas/{docId} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == docId;
-    }
-    // Deny everything else by default
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth.uid in [
+        "UID_DE_PERSONA_1",
+        "UID_DE_PERSONA_2"
+      ];
     }
   }
 }
 ```
 
-### Couple-sharing note
-The new UID-based path means each person has their own separate data. If both partners previously shared data on one device using anonymous login, this continues to work (the device has one anonymous UID). If partners use separate devices with separate email accounts, they would need a sharing mechanism (invite code / shared email). Implementing a shared-access model is a future enhancement.
+Replace `UID_DE_PERSONA_1` and `UID_DE_PERSONA_2` with the real UIDs from Firebase Console → Authentication → Users.
+
+**Why this is correct:**
+- Nobody else can access the data, even if they register an account
+- Both partners share full read/write access to the shared document
+- No code changes needed in the app — enforcement is 100% server-side
+
+### How to find your UIDs
+Firebase Console → Authentication → Users → copy the "UID" column for each of the two accounts.
 
 ---
 
