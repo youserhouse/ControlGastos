@@ -31,11 +31,10 @@ function removeScanFile(id) {
 
 function renderQueue() {
   const q = document.getElementById('scanQueue');
-  // SECURITY: escapeHTML() prevents XSS from malicious filenames
   q.innerHTML = scanFiles.map(f=>`
     <div class="queue-item">
       <div class="queue-thumb"><img src="${f.dataUrl}" alt=""></div>
-      <span class="queue-name">${escapeHTML(f.name)}</span>
+      <span class="queue-name">${f.name}</span>
       <span class="queue-status">${f.status==='done'?'<span style="color:#5ABEA0">✓</span>':f.status==='error'?'<span style="color:#E07070">✗</span>':'⏳'}</span>
       <button class="queue-rm" onclick="removeScanFile('${f.id}')">✕</button>
     </div>`).join('');
