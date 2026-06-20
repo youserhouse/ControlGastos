@@ -1,78 +1,30 @@
-# Security Notes — ControlGastos
+# Security Notes
 
-## Fixes applied (security audit)
+## Firebase Config
 
-| # | Severity | Issue | Status |
-|---|----------|-------|--------|
-| 1 | 🔴 Critical | Hardcoded Firebase API key committed to repo | Mitigated — `js/firebase.config.js` pattern added; rotate keys in Firebase Console |
-| 2 | 🔴 Critical | Firestore document `parejas/shared` accessible to ANY authenticated user | **Fixed** — Firestore rules restrict access to the two allowlisted UIDs only |
-| 3 | 🟠 High | XSS in `scanner.js renderQueue()` — file name injected raw into `innerHTML` | **Fixed** — wrapped with `escapeHTML()` |
-| 4 | 🟠 High | XSS in `ingresos.js renderIngresos()` — person name and type injected raw into `innerHTML` | **Fixed** — wrapped with `escapeHTML()` |
-| 5 | 🟡 Medium | No Content Security Policy | **Fixed** — CSP meta tag added to `index.html` |
-| 6 | 🟡 Medium | Anthropic API key stored in `localStorage` (visible in DevTools) | Documented below — server-side proxy recommended |
-| 7 | 🟡 Medium | SheetJS loaded from CDN without Subresource Integrity | Documented below |
-| 8 | 🔵 Low | `app.js` (unused monolith in repo root) also contains hardcoded Firebase key | Remove or keep for reference; not loaded by `index.html` |
+The `firebaseConfig` object in `app.js` contains API keys and project identifiers.
+Firebase client-side keys are **restricted by domain** in the Firebase Console — they are
+not secret, but you should still restrict them to your deployment domain via
+[Firebase Console → Project Settings → API key restrictions](https://console.firebase.google.com).
+
+For production, consider moving config to a `config.local.js` file excluded from git
+(see `.env.example`).
 
 ---
 
-## 1. Firebase API Key
-
-### What was done
-- Added `js/firebase.config.js` (gitignored) as the canonical place for real keys.
-- `js/firebase.js` now reads `window.FIREBASE_CONFIG` (from that file) and falls back to the previously hardcoded values.
-- Added `js/firebase.config.example.js` as a template.
-
-### What you MUST do now
-1. **Rotate / restrict the exposed key** in [Firebase Console → Project Settings → API key restrictions](https://console.firebase.google.com).
-   Set the allowed HTTP referrers to your production domain only (e.g. `youserhouse.github.io/*`).
-2. Copy `js/firebase.config.example.js` → `js/firebase.config.js` and fill in your values.
-3. Since the old key was committed to git history, it should be considered compromised. Regenerate it in the Firebase Console.
-
----
-
-## 2. Firestore Access Control — Two-Person Allowlist
-
-### Design context
-ControlGastos is built for **exactly two people** sharing **one document** (`parejas/shared`). The correct security model is NOT per-user isolation (that would break sharing) but a **UID allowlist** — only the two known UIDs can read/write anything in Firestore.
-
-### What was done
-`SHARED_DOC` keeps pointing to `parejas/shared` (shared couple document). Access is enforced server-side by Firestore rules, not in the client.
-
-### Firestore Security Rules to apply
-
-In [Firebase Console → Firestore → Rules](https://console.firebase.google.com), replace the current rules with:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth.uid in [
-        "UID_DE_PERSONA_1",
-        "UID_DE_PERSONA_2"
-      ];
-    }
-  }
-}
-```
-
-Replace `UID_DE_PERSONA_1` and `UID_DE_PERSONA_2` with the real UIDs from Firebase Console → Authentication → Users.
-
-**Why this is correct:**
-- Nobody else can access the data, even if they register an account
-- Both partners share full read/write access to the shared document
-- No code changes needed in the app — enforcement is 100% server-side
-
-### How to find your UIDs
-Firebase Console → Authentication → Users → copy the "UID" column for each of the two accounts.
-
----
-
-## 3. Anthropic API Key — HIGH RISK
+## Anthropic API Key — HIGH RISK
 
 ### The Problem
 
-`callClaudeReceipt()` and `_detectMappingWithAI()` call the Anthropic API **directly from the browser**, so the API key is visible to anyone who opens DevTools. The key is stored in `localStorage`.
+`callClaudeReceipt()` in `app.js` calls the Anthropic API **directly from the browser**,
+meaning the API key is visible to anyone who opens DevTools or shares the app URL.
+
+```js
+// app.js — current (insecure) pattern
+headers: { 'x-api-key': apiKey, ... }  // apiKey stored in localStorage
+```
+
+This key grants full access to your Anthropic account and can rack up charges if leaked.
 
 ### Recommended Solution
 
@@ -98,7 +50,7 @@ exports.analyzeReceipt = onCall(async (request) => {
 
 Store the key with: `firebase functions:secrets:set ANTHROPIC_API_KEY`
 
-#### Option B — Cloudflare Worker (zero-cost tier)
+#### Option B — Cloudflare Worker (zero-cost tier, no Firebase required)
 
 ```js
 // worker.js
@@ -114,56 +66,14 @@ export default {
       },
       body: JSON.stringify(body)
     });
-    return new Response(await res.text(), {
-      headers: {
-        'content-type': 'application/json',
-        'Access-Control-Allow-Origin': 'https://youserhouse.github.io'
-      }
-    });
+    return new Response(await res.text(), { headers: { 'content-type': 'application/json' } });
   }
 };
 ```
 
 Set the key in: Cloudflare Dashboard → Worker → Settings → Variables → Secrets
 
----
+### In the meantime
 
-## 4. Subresource Integrity (SRI) for SheetJS
-
-`bank-import.js` dynamically loads SheetJS from `cdn.sheetjs.com`. Without an `integrity` attribute, a compromised CDN could serve malicious code.
-
-**Fix:** Compute the hash and add it when injecting the script:
-
-```js
-// In _loadSheetJS():
-s.integrity = 'sha384-<hash-here>';
-s.crossOrigin = 'anonymous';
-```
-
-To get the hash:
-```bash
-curl -s "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" \
-  | openssl dgst -sha384 -binary | openssl enc -base64 -A
-```
-
-Alternatively, host a copy of xlsx.full.min.js in your own repo to eliminate the CDN dependency entirely.
-
----
-
-## 5. Content Security Policy
-
-A `Content-Security-Policy` meta tag has been added to `index.html`. It restricts:
-- `connect-src` to known Firebase/Anthropic domains, preventing data exfiltration
-- `script-src` to `self`, `gstatic.com`, and `cdn.sheetjs.com`
-- Framing (`frame-ancestors 'none'`), preventing clickjacking
-
-**Known limitation:** `'unsafe-inline'` is still required for `script-src` because the app uses inline `onclick=` handlers. Future improvement: refactor to `addEventListener()` calls and remove `'unsafe-inline'`.
-
----
-
-## 6. Recommended additional steps
-
-- Enable [Firebase App Check](https://firebase.google.com/docs/app-check) to ensure only your app can access your Firebase project.
-- Restrict the Firebase API key in Google Cloud Console to only the APIs you use (Cloud Firestore API, Identity Toolkit API).
-- Add rate limiting to any Anthropic proxy to prevent cost abuse.
-- Periodically review Firebase auth users in the Firebase Console to remove stale anonymous accounts.
+The app shows a warning banner in the scanner UI. Users should never share the app URL
+with people they don't fully trust while a key is configured.
